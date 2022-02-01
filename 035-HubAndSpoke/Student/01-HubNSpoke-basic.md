@@ -16,8 +16,6 @@ We will be simulating the onprem environment using a VNet in Azure, and connecti
 
 ## Method
 
-### Simulated On-Prem Network
-
 **_IMPORTANT: Be sure to create ALL resources in Canada Central region._**
 
 **_IMPORTANT: If a parameter is not specified, it should not be set OR the default is acceptable._**

@@ -8,15 +8,41 @@ In this module you will be fine-tuning your routing design to send VM traffic th
 
 ## Description
 
-In this module you should deploy an Azure Firewall to the hub VNet, so that you have the topology described here:
+In this module we will deploy an Azure Firewall to the hub VNet, so that you have the topology described here:
 
 ![hubnspoke basic](media/hubnspoke-01.png)
 
-You need to make sure that the firewall is inspecting all Internet traffic from the Virtual Machines, as well as traffic going from Azure to onprem.
+We will make sure that the firewall is inspecting all outbound Internet traffic from the Virtual Machines, as well as traffic going from Azure to onprem. Finally, we will direct traffic from the Internet through the firewall for inspection and redirection to the web servers installed on each cloud VM in the last module.
 
-Additionally, you should install a web server on each Azure VM (`hub-vm`, `spoke1-vm` and `spoke2-vm`), and make sure that the web servers are reachable from the public Internet.
+## Method
 
-echo `hostname` | sudo tee index.html
+**_IMPORTANT: Be sure to create ALL resources in Canada Central region._**
+
+**_IMPORTANT: If a parameter is not specified, it should not be set OR the default is acceptable._**
+
+1. Modify the `hub` VNet so that it contains a new subnet for the firewall per the table below:
+
+   | Name  | Address Space | Subnets<br>Name: Address Space                                                               |
+   | ----- | ------------- | -------------------------------------------------------------------------------------------- |
+   | `Hub` | 10.0.0.0/16   | GatewaySubnet: 10.0.0.0/24 <br>default: 10.0.10.0/24<br>**AzureFirewallSubnet: 10.0.1.0/24** |
+
+1. Create a new Azure Firewall with the following settings:
+
+   - Name: `hub-fw`
+   - Tier: `standard`
+   - Firewall management: `Use policy`
+   - Create a new policy named: `hub-policy`
+   - VNet: `hub`
+   - Create a new public IP named: `fw-pip`
+
+   The firewall will take between 5-10 minutes to deploy.
+
+1. While the firewall is deploying, create three route tables:
+   1. Name: `hub`
+   1. Propagate gateway routes: `yes`
+   1. Routes:
+
+Once the firewall has deployed, go to Azure Firewall Manager, and locate the `hub-policy`
 
 ## Success Criteria
 
