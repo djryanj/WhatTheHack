@@ -16,8 +16,8 @@ In this module we'll be setting up all the tools we will need to complete our mo
     - [Azure Powershell modules](https://docs.microsoft.com/en-us/powershell/azure/new-azureps-module-az)
     - [Visual Studio Code](https://code.visualstudio.com/): the Windows Powershell ISE might be an option here for Windows users, but VS Code is far, far better
     - [VScode Powershell extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.PowerShell)
-  - **IMPORTANT**: Although Azure CLI is also usable to complete this Hack-a-thon, in the interest of time we will standardize on using Powershell.
-  - The Azure Portal way: not really recommended, but you can still the portal to fulfill most of the modules.
+  - **IMPORTANT**: Although Azure CLI is also usable to complete this Hack-a-thon, in the interest of time we will standardize on using Powershell in cases where we need to use a shell.
+  - The Azure Portal way: much of the work will be done here.
 
 **NOTE:** You can use Azure Powershell and CLI on the Azure Cloud Shell, but running the commands locally along Visual Studio Code will give you a much better experience
 
