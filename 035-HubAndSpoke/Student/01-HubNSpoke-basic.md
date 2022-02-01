@@ -12,7 +12,7 @@ In this module you will create the topology described in this diagram:
 
 ![hubnspoke basic](media/nofw.png)
 
-To simulate the onprem environment (represented as the "onprem vnet" in the diagram above) you have multiple options. See the related documentation and speak to your coach.
+We will be simulating the onprem environment using a VNet in Azure, and connecting to a VM deployed therein via SSH.
 
 ## Method
 
