@@ -31,18 +31,136 @@ We will make sure that the firewall is inspecting all outbound Internet traffic 
    - Name: `hub-fw`
    - Tier: `standard`
    - Firewall management: `Use policy`
-   - Create a new policy named: `hub-policy`
+   - Create a new policy named: `demo-policy`
    - VNet: `hub`
    - Create a new public IP named: `fw-pip`
 
    The firewall will take between 5-10 minutes to deploy.
 
-1. While the firewall is deploying, create three route tables:
-   1. Name: `hub`
+1. While the firewall is deploying, create four route tables:
+   1. Name: `hub-gateway`
    1. Propagate gateway routes: `yes`
-   1. Routes:
+   ***
+   1. Name: `hub`
+   1. Propagate gateway routes: `no`
+   ***
+   1. Name: `spoke1`
+   1. Propagate gateway routes: `no`
+   ***
+   1. Name: `spoke2`
+   1. Propagate gateway routes: `no`
+1. Once created, associate the route tables as follows:
 
-Once the firewall has deployed, go to Azure Firewall Manager, and locate the `hub-policy`
+   | Route Table   | VNet   | Subnet        |
+   | ------------- | ------ | ------------- |
+   | `hub-gateway` | hub    | GatewaySubnet |
+   | `hub`         | hub    | default       |
+   | `spoke1`      | spoke1 | defaul        |
+   | `spoke2`      | spoke2 | default       |
+
+1. Create the following routes in the correct route table:
+
+   `hub-gateway` Route Table
+
+   | Name   | Address prefix | Next hop type     | Next hop IP address |
+   | ------ | -------------- | ----------------- | ------------------- |
+   | hub    | 10.0.0.0/16    | Virtual appliance | 10.0.1.4            |
+   | spoke1 | 10.1.0.0/16    | Virtual appliance | 10.0.1.4            |
+   | spoke2 | 10.2.0.0/16    | Virtual appliance | 10.0.1.4            |
+
+   **_Note_**: At this point, traffic from on-premises to the cloud and back will break.
+
+   `hub` Route Table
+
+   | Name    | Address prefix | Next hop type     | Next hop IP address |
+   | ------- | -------------- | ----------------- | ------------------- |
+   | default | 0.0.0.0/0      | Virtual appliance | 10.0.1.4            |
+   | spoke1  | 10.1.0.0/16    | Virtual appliance | 10.0.1.4            |
+   | spoke2  | 10.2.0.0/16    | Virtual appliance | 10.0.1.4            |
+
+   **_Note_**: At this point, traffic in the hub to anywhere will break.
+
+   `spoke1` Route Table
+
+   | Name    | Address prefix | Next hop type     | Next hop IP address |
+   | ------- | -------------- | ----------------- | ------------------- |
+   | default | 0.0.0.0/0      | Virtual appliance | 10.0.1.4            |
+   | hub     | 10.0.0.0/16    | Virtual appliance | 10.0.1.4            |
+   | spoke2  | 10.2.0.0/16    | Virtual appliance | 10.0.1.4            |
+
+   `spoke2` Route Table
+
+   | Name    | Address prefix | Next hop type     | Next hop IP address |
+   | ------- | -------------- | ----------------- | ------------------- |
+   | default | 0.0.0.0/0      | Virtual appliance | 10.0.1.4            |
+   | hub     | 10.0.0.0/16    | Virtual appliance | 10.0.1.4            |
+   | spoke1  | 10.1.0.0/16    | Virtual appliance | 10.0.1.4            |
+
+   **_Note_**: At this point, traffic in the cloud is broken.
+
+1. Create a Log Analytics workspace in your resource group called `la-hackathon`.
+1. Once the firewall has deployed, navigate to it in the Portal. Click on `Diagnostic Settings` in the left-hand blade, and then click on `+ Add Diagnostic Setting`. Name it `Log Analytics`, then enable `allLogs`, and `Send to the Log Analytics workspace` created above.
+1. Go to Azure Firewall Manager, and locate the `demo-policy`.
+
+   Although it is not germane to this exercise, it is worth knowing that Azure Firewall has 3 types of rulesets:
+
+   - Network Rules: These are standard Layer-4 (source/dest/port) rules
+   - Application rules: These are Layer-7 aware rules that permit FQDN filtering basic L4 for ease of use
+   - DNAT rules: These are better thought of as _inbound_ rules, from the Internet to something in the protected virtual networks
+
+1. Create the following ruleset:
+
+   - Name: `Internal`
+   - Collection type: `Network`
+   - Priority: `100`
+   - Rule collection action: `Allow`
+   - Rule collection group: `DefaultNetworkRuleCollectionGroup`
+   - Rules:
+
+   | Name           | Source type | Source                              | Protocol | Destination Ports | Destination Type | Destination                         |
+   | -------------- | ----------- | ----------------------------------- | -------- | ----------------- | ---------------- | ----------------------------------- |
+   | Cloud-ToOnPrem | IP Address  | 10.0.0.0/16,10.1.0.0/16,10.2.0.0/16 | Any      | \*                | IP Address       | 172.16.0.0/16                       |
+   | OnPrem-ToCloud | IP Address  | 172.16.0.0/16                       | Any      | \*                | IP Address       | 10.0.0.0/16,10.1.0.0/16,10.2.0.0/16 |
+   | Gateways       | IP Address  | 10.0.0.0/24                         | Any      | \*                | IP Address       | 10.0.0.0/24                         |
+   | Hub-To-Spoke1  | IP Address  | 10.0.0.0/16                         | Any      | \*                | IP Address       | 10.1.0.0/16                         |
+   | Spoke1-To-Hub  | IP Address  | 10.1.0.0/16                         | Any      | \*                | IP Address       | 10.0.0.0/16                         |
+   | Hub-To-Spoke2  | IP Address  | 10.0.0.0/16                         | Any      | \*                | IP Address       | 10.2.0.0/16                         |
+   | Spoke2-To-Hub  | IP Address  | 10.2.0.0/16                         | Any      | \*                | IP Address       | 10.1.0.0/16                         |
+
+1. At this point, traffic flows should be working correctly and identically from before we put in the firewall. Verify it by:
+
+   - From `onprem-vm`, ping 10.0.10.4 (`hub-vm`), 10.1.10.4 (`spoke1-vm`), and 10.2.10.4 (`spoke2-vm`)
+   - From `onprem-vm`, ssh to 10.1.10.4 (`spoke1-vm`). Attempt to ping 10.2.10.4 (`spoke2-vm`)
+   - From `spoke1-vm`, `traceroute` to 172.16.10.4 (`onprem-vm`) and observe the path.
+   - From one of the cloud VMs, attempt to `curl google.com`.
+
+1. Add the following rules to the `Internal` firewall ruleset above:
+   | Name | Source type | Source | Protocol | Destination Ports | Destination Type | Destination |
+   | -------------- | ----------- | ----------------------------------- | -------- | ----------------- | ---------------- | ----------------------------------- |
+   | Spoke1-to-Spoke2 | IP Address | 10.1.0.0/16 | Any | \* | IP Address | 10.2.0.0/16 |
+   | Spoke2-to-Spoke1 | IP Address | 10.2.0.0/16 | Any | \* | IP Address | 10.1.0.0/16 |
+1. Once the ruleset has saved, attempt to ping from `spoke1-vm`, attempt to ping 10.2.10.4 (`spoke2-vm`).
+1. Deploy a fifth VM with the following configuration:
+   1. Name: `spoke1-vm2`
+   1. Image: Ubuntu Server 20.04 LTS - Gen 2
+   1. Size: `Standard_B2s`
+   1. Authentication type: Password
+      - Username: `azureuser`
+      - Password: `P@$$w0rd12300`
+   1. Public inbound ports: None
+   1. VNet/subnet: `spoke1/default`
+   1. Public IP: None
+   1. NIC security group: `None`
+   1. Public inbound ports: None
+   1. Set up auto shutdown
+   1. Input the following cloud-init config:
+1. While it is deploying, edit the `spoke1` routing table and add the following rule:
+
+   | Name   | Address prefix | Next hop type     | Next hop IP address |
+   | ------ | -------------- | ----------------- | ------------------- |
+   | subnet | 10.1.0.0/16    | Virtual appliance | 10.0.1.4            |
+
+1. Wait a minute or two, and then go examine the effective routes on the `spoke1-vm` NIC (or the new `spoke1-vm2` NIC).
 
 ## Success Criteria
 

@@ -84,6 +84,7 @@ We will be simulating the onprem environment using a VNet in Azure, and connecti
       package_upgrade: true
       packages:
         - apache2
+        - traceroute
       write_files:
         - path: /var/www/html/index.html
           content: "<h1>onprem-vm</h1>"
@@ -111,6 +112,7 @@ We will be simulating the onprem environment using a VNet in Azure, and connecti
       package_upgrade: true
       packages:
         - apache2
+        - traceroute
       write_files:
         - path: /var/www/html/index.html
           content: "<h1>hub-vm</h1>"
@@ -139,6 +141,7 @@ We will be simulating the onprem environment using a VNet in Azure, and connecti
       package_upgrade: true
       packages:
          - apache2
+         - traceroute
       write_files:
          - path: /var/www/html/index.html
             content: "<h1>spoke1-vm</h1>"
@@ -168,6 +171,7 @@ We will be simulating the onprem environment using a VNet in Azure, and connecti
       package_upgrade: true
       packages:
          - apache2
+         - traceroute
       write_files:
          - path: /var/www/html/index.html
             content: "<h1>spoke2-vm</h1>"
@@ -205,6 +209,7 @@ We will be simulating the onprem environment using a VNet in Azure, and connecti
 1. Disconnect SSH from `spoke1-vm`.
 1. SSH from `onprem-vm` to `hub-vm`.
 1. Ping both `spoke1-vm` and s`poke2-vm` from `hub-vm`.
+1. From `spoke1-vm`, `traceroute` to 172.16.10.4 (`onprem-vm`) and observe the path.
 1. Examine the effective routes that each VM NIC sees in the portal.
 1. Examine the BGP peers of each VNG.
 
