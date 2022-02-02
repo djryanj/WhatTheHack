@@ -26,7 +26,7 @@ We will be simulating the onprem environment using a VNet in Azure, and connecti
    |Name|Address Space|Subnets<br>Name: Address Space|
    |---|---|---|
    |`Hub`|10.0.0.0/16|GatewaySubnet: 10.0.0.0/24 <br>default: 10.0.10.0/24<br>AzureFirewallSubnet: 10.0.1.0/24|
-   |`Onprem`|172.16.0.0/16|GatewaySubnet: 172.16.0.0/24 <br>default: 172.16.1.0/24|
+   |`Onprem`|172.16.0.0/16|GatewaySubnet: 172.16.0.0/24 <br>default: 172.16.10.0/24|
    |`Spoke1`|10.1.0.0/16|default: 10.1.10.0/24|
    |`Spoke2`|10.2.0.0/16|default: 10.2.10.0/24|
 1. With the VNets created, create two Virtual Network Gateways with the following configurations (**NOTE**: Virtual Network Gateways take between 30-40 minutes to create once the job has been submitted. Be patient.):
@@ -94,7 +94,7 @@ We will be simulating the onprem environment using a VNet in Azure, and connecti
 
    ***
 
-   1. Name:` hub-vm`
+   1. Name: `hub-vm`
    1. Image: Ubuntu Server 20.04 LTS - Gen 2
    1. Size: `Standard_B2s`
    1. Authentication type: Password
@@ -140,12 +140,12 @@ We will be simulating the onprem environment using a VNet in Azure, and connecti
       #cloud-config
       package_upgrade: true
       packages:
-         - apache2
-         - traceroute
+        - apache2
+        - traceroute
       write_files:
-         - path: /var/www/html/index.html
-            content: "<h1>spoke1-vm</h1>"
-            defer: true
+        - path: /var/www/html/index.html
+          content: "<h1>spoke1-vm</h1>"
+          defer: true
       ```
 
    1. Accept rest of defaults
@@ -170,12 +170,12 @@ We will be simulating the onprem environment using a VNet in Azure, and connecti
       #cloud-config
       package_upgrade: true
       packages:
-         - apache2
-         - traceroute
+        - apache2
+        - traceroute
       write_files:
-         - path: /var/www/html/index.html
-            content: "<h1>spoke2-vm</h1>"
-            defer: true
+        - path: /var/www/html/index.html
+          content: "<h1>spoke2-vm</h1>"
+          defer: true
       ```
 
    1. Accept rest of defaults
