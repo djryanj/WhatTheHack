@@ -140,6 +140,12 @@ We will make sure that the firewall is inspecting all outbound Internet traffic 
    | Spoke1-to-Spoke2 | IP Address | 10.1.0.0/16 | Any | \* | IP Address | 10.2.0.0/16 |
    | Spoke2-to-Spoke1 | IP Address | 10.2.0.0/16 | Any | \* | IP Address | 10.1.0.0/16 |
 1. Once the ruleset has saved, attempt to ping from `spoke1-vm`, attempt to ping 10.2.10.4 (`spoke2-vm`).
+1. Navigate to the Application rules blade of the firewall policy. Add the following rule:
+
+   | Name      | Source type | Source                                | Protocol   | TLS inspection | Destination Type | Destination |
+   | --------- | ----------- | ------------------------------------- | ---------- | -------------- | ---------------- | ----------- |
+   | Allow-Web | IP Address  | 10.0.0.0/16, 10.1.0.0/16, 10.2.0.0/16 | http,https | No             | FQDN             | \*          |
+
 1. Deploy a fifth VM with the following configuration:
    1. Name: `spoke1-vm2`
    1. Image: Ubuntu Server 20.04 LTS - Gen 2
@@ -154,13 +160,43 @@ We will make sure that the firewall is inspecting all outbound Internet traffic 
    1. Public inbound ports: None
    1. Set up auto shutdown
    1. Input the following cloud-init config:
-1. While it is deploying, edit the `spoke1` routing table and add the following rule:
+1. While it is deploying, edit the `spoke1` routing table and add the following rules:
 
-   | Name   | Address prefix | Next hop type     | Next hop IP address |
-   | ------ | -------------- | ----------------- | ------------------- |
-   | subnet | 10.1.0.0/16    | Virtual appliance | 10.0.1.4            |
+   | Name   | Address prefix                | Next hop type     | Next hop IP address |
+   | ------ | ----------------------------- | ----------------- | ------------------- |
+   | subnet | 10.1.0.0/16                   | Virtual appliance | 10.0.1.4            |
+   | me     | \<your public IP address\>/32 | Internet          |                     |
 
 1. Wait a minute or two, and then go examine the effective routes on the `spoke1-vm` NIC (or the new `spoke1-vm2` NIC).
+1. Once the new VM has deployed, `traceroute` from `spoke1-vm` to `spoke1-vm2` and examine the path.
+1. Navigate to the Firewall resource, and click on Logs in the Monitoring section of the left-hand blade (**Note**: this is a shortcut to the Log Analytics resource created above, that also restricts the scope of the found logs to just those from the firewall resource, _and_ provides some example queries relevant to the specific resource type (in the case, Azure Firewall). The same set of logs can be viewed by going directly to the Log Analytics workspace, but you will need to ensure that your query (KQL) contains a `where` clause that restricts logs to just those of the firewall resource to achieve the same results.)
+1. Load the example query called "Network rule log data" and run it. Find the log data the corresponds to the `traceroute` done between `spoke1-vm` and `spoke1-vm2` above.
+1. Using a new browser tab (or a second person), edit the `spoke1` routing table again and remove the `subnet` rule created above. Leave the `me` route.
+1. Wait a minute or two, and then go examine the effective routes on the `spoke1-vm` NIC (or the new `spoke1-vm2` NIC).
+1. `traceroute` again from `spoke1-vm` to `spoke1-vm2` and examine the path.
+1. Re-run the "Network rule log data" query and examine the data (**Note**: data ingestion into Log Analytics can take a few minutes. In this case, you should never see data about the `traceroute` done above, but to be sure, wait a minute or two and re-run the query.)
+1. Open a web browser and navigate to the public IP address of `spoke1-vm`. You should see a very basic web page that only shows just `spoke1-vm`.
+1. Find the NSG that corresponds to the NIC of the server you were browsing, and remove the rule that permits port 80 access. **Note**: applying NSG rules takes about a minute to complete.
+1. Browse to the _same_ public IP again. Your connection should be refused.
+1. Browse to the firewall policy, and add a DNAT rule:
+
+   - Name: `Dnat`
+   - Priority: 100
+   - Rule collection group: `DefaultDnatRuleCollectionGroup`
+   - Rules:
+
+   | Rule name | Source | Port | Protocol | Destination               | Translated Address or FQDN | Translated Port |
+   | --------- | ------ | ---- | -------- | ------------------------- | -------------------------- | --------------- |
+   | Allow-Web | \*     | 80   | TCP      | \<public IP of firewall\> | 10.1.10.4                  | 80              |
+
+1. Browse to the public IP of the firewall. You should see the same `spoke1-vm` page as before, but now the traffic is being inspected/controlled by the firewall.
+1. SSH to the `spoke1-vm` and issue the command: `cat /var/log/apache2/access.log`. Examine the logs. Pay attention to the first "column" and explain what you see.
+
+---
+
+### Question: How can we protect multiple sites with multiple servers serving them behind a single firewall?
+
+---
 
 ## Success Criteria
 
@@ -175,15 +211,3 @@ We will make sure that the firewall is inspecting all outbound Internet traffic 
 ## Related documentation
 
 - [What is Azure Firewall](https://docs.microsoft.com/azure/firewall/overview)
-- Example troubleshooting pages that can easily be deployed on the web platform of your choice:
-  - [Inspector Gadget](https://github.com/jelledruyts/InspectorGadget) (.netcore)
-  - [whoami](https://github.com/erjosito/whoami/tree/master/api-vm) (python/flask)
-  - [KUARD](https://github.com/kubernetes-up-and-running/kuard) (container)
-- [Azure Routing Cheat Sheet](Resources/routing-cheat-sheet.md)
-
-## Advanced Modules (Optional)
-
-If you want to dive even deeper in the technology:
-
-- Deploy a second VM in spoke1, in the same subnet that you used for the web server in spoke1, and make sure that intra-subnet VM goes through the Azure Firewall as well. This is what sometimes is called microsegmentation or zero-trust segmentation.
-- Configure the Azure Firewall with a combination of Network Rules and Application Rules, and explain the order in which the rules are matched. Are you able to use Application Rules for traffic sent from the public Internet to the web servers over DNAT?
