@@ -1,6 +1,6 @@
 # Module 2: Firewalling Traffic
 
-[< Previous Module](./01-HubNSpoke-basic.md) - **[Home](../README.md)** - [Next Module >](./03-Asymmetric.md)
+[< Previous Module](./01-HubNSpoke-basic.md) - **[Home](../README.md)** - [Next Module >](./04-AppGW.md)
 
 ## Introduction
 
@@ -35,7 +35,7 @@ We will make sure that the firewall is inspecting all outbound Internet traffic 
    - VNet: `hub`
    - Create a new public IP named: `fw-pip`
 
-   The firewall will take between 5-10 minutes to deploy.
+   The firewall will take between 5-10 minutes to deploy. Once the PIP has deployed, gather the IP and record it.
 
 1. While the firewall is deploying, create four route tables:
    1. Name: `hub-gateway`
@@ -55,7 +55,7 @@ We will make sure that the firewall is inspecting all outbound Internet traffic 
    | ------------- | ------ | ------------- |
    | `hub-gateway` | hub    | GatewaySubnet |
    | `hub`         | hub    | default       |
-   | `spoke1`      | spoke1 | defaul        |
+   | `spoke1`      | spoke1 | default       |
    | `spoke2`      | spoke2 | default       |
 
 1. Create the following routes in the correct route table:
@@ -72,31 +72,32 @@ We will make sure that the firewall is inspecting all outbound Internet traffic 
 
    `hub` Route Table
 
-   | Name    | Address prefix | Next hop type     | Next hop IP address |
-   | ------- | -------------- | ----------------- | ------------------- |
-   | default | 0.0.0.0/0      | Virtual appliance | 10.0.1.4            |
-   | spoke1  | 10.1.0.0/16    | Virtual appliance | 10.0.1.4            |
-   | spoke2  | 10.2.0.0/16    | Virtual appliance | 10.0.1.4            |
+   | Name    | Address prefix   | Next hop type     | Next hop IP address |
+   | ------- | ---------------- | ----------------- | ------------------- |
+   | default | 0.0.0.0/0        | Virtual appliance | 10.0.1.4            |
+   | spoke1  | 10.1.0.0/16      | Virtual appliance | 10.0.1.4            |
+   | spoke2  | 10.2.0.0/16      | Virtual appliance | 10.0.1.4            |
+   | fw-pip  | \<PIP of FW\>/32 | Internet          |                     |
 
    **_Note_**: At this point, traffic in the hub to anywhere will break.
 
    `spoke1` Route Table
 
-   | Name    | Address prefix | Next hop type     | Next hop IP address |
-   | ------- | -------------- | ----------------- | ------------------- |
-   | default | 0.0.0.0/0      | Virtual appliance | 10.0.1.4            |
-   | hub     | 10.0.0.0/16    | Virtual appliance | 10.0.1.4            |
-   | spoke2  | 10.2.0.0/16    | Virtual appliance | 10.0.1.4            |
+   | Name    | Address prefix   | Next hop type     | Next hop IP address |
+   | ------- | ---------------- | ----------------- | ------------------- |
+   | default | 0.0.0.0/0        | Virtual appliance | 10.0.1.4            |
+   | hub     | 10.0.0.0/16      | Virtual appliance | 10.0.1.4            |
+   | fw-pip  | \<PIP of FW\>/32 | Internet          |                     |
 
    `spoke2` Route Table
 
-   | Name    | Address prefix | Next hop type     | Next hop IP address |
-   | ------- | -------------- | ----------------- | ------------------- |
-   | default | 0.0.0.0/0      | Virtual appliance | 10.0.1.4            |
-   | hub     | 10.0.0.0/16    | Virtual appliance | 10.0.1.4            |
-   | spoke1  | 10.1.0.0/16    | Virtual appliance | 10.0.1.4            |
+   | Name    | Address prefix   | Next hop type     | Next hop IP address |
+   | ------- | ---------------- | ----------------- | ------------------- |
+   | default | 0.0.0.0/0        | Virtual appliance | 10.0.1.4            |
+   | hub     | 10.0.0.0/16      | Virtual appliance | 10.0.1.4            |
+   | fw-pip  | \<PIP of FW\>/32 | Internet          |                     |
 
-   **_Note_**: At this point, traffic in the cloud is broken.
+   **_Note_**: At this point, traffic in the cloud is broken, because the firewall has no rules and is deny all by default.
 
 1. Create a Log Analytics workspace in your resource group called `la-hackathon`.
 1. Once the firewall has deployed, navigate to it in the Portal. Click on `Diagnostic Settings` in the left-hand blade, and then click on `+ Add Diagnostic Setting`. Name it `Log Analytics`, then enable `allLogs`, and `Send to the Log Analytics workspace` created above.
@@ -105,7 +106,7 @@ We will make sure that the firewall is inspecting all outbound Internet traffic 
    Although it is not germane to this exercise, it is worth knowing that Azure Firewall has 3 types of rulesets:
 
    - Network Rules: These are standard Layer-4 (source/dest/port) rules
-   - Application rules: These are Layer-7 aware rules that permit FQDN filtering basic L4 for ease of use
+   - Application rules: These are Layer-7 aware rules that permit FQDN filtering as well as using Layer 4 flows.
    - DNAT rules: These are better thought of as _inbound_ rules, from the Internet to something in the protected virtual networks
 
 1. Create the following ruleset:
@@ -139,7 +140,7 @@ We will make sure that the firewall is inspecting all outbound Internet traffic 
    | -------------- | ----------- | ----------------------------------- | -------- | ----------------- | ---------------- | ----------------------------------- |
    | Spoke1-to-Spoke2 | IP Address | 10.1.0.0/16 | Any | \* | IP Address | 10.2.0.0/16 |
    | Spoke2-to-Spoke1 | IP Address | 10.2.0.0/16 | Any | \* | IP Address | 10.1.0.0/16 |
-1. Once the ruleset has saved, attempt to ping from `spoke1-vm`, attempt to ping 10.2.10.4 (`spoke2-vm`).
+1. Once the ruleset has saved, attempt to ping from `spoke1-vm`, attempt to ping 10.2.10.4 (`spoke2-vm`). **Does it work? Why?**
 1. Navigate to the Application rules blade of the firewall policy. Add the following rule:
 
    | Name      | Source type | Source                                | Protocol   | TLS inspection | Destination Type | Destination |
@@ -162,22 +163,19 @@ We will make sure that the firewall is inspecting all outbound Internet traffic 
    1. Input the following cloud-init config:
 1. While it is deploying, edit the `spoke1` routing table and add the following rules:
 
-   | Name   | Address prefix                | Next hop type     | Next hop IP address |
-   | ------ | ----------------------------- | ----------------- | ------------------- |
-   | subnet | 10.1.0.0/16                   | Virtual appliance | 10.0.1.4            |
-   | me     | \<your public IP address\>/32 | Internet          |                     |
+   | Name   | Address prefix | Next hop type     | Next hop IP address |
+   | ------ | -------------- | ----------------- | ------------------- |
+   | spoke1 | 10.1.0.0/16    | Virtual appliance | 10.0.1.4            |
 
 1. Wait a minute or two, and then go examine the effective routes on the `spoke1-vm` NIC (or the new `spoke1-vm2` NIC).
 1. Once the new VM has deployed, `traceroute` from `spoke1-vm` to `spoke1-vm2` and examine the path.
 1. Navigate to the Firewall resource, and click on Logs in the Monitoring section of the left-hand blade (**Note**: this is a shortcut to the Log Analytics resource created above, that also restricts the scope of the found logs to just those from the firewall resource, _and_ provides some example queries relevant to the specific resource type (in the case, Azure Firewall). The same set of logs can be viewed by going directly to the Log Analytics workspace, but you will need to ensure that your query (KQL) contains a `where` clause that restricts logs to just those of the firewall resource to achieve the same results.)
 1. Load the example query called "Network rule log data" and run it. Find the log data the corresponds to the `traceroute` done between `spoke1-vm` and `spoke1-vm2` above.
-1. Using a new browser tab (or a second person), edit the `spoke1` routing table again and remove the `subnet` rule created above. Leave the `me` route.
+1. Using a new browser tab (or a second person), edit the `spoke1` routing table again and remove the `spoke1` rule created above.
 1. Wait a minute or two, and then go examine the effective routes on the `spoke1-vm` NIC (or the new `spoke1-vm2` NIC).
 1. `traceroute` again from `spoke1-vm` to `spoke1-vm2` and examine the path.
 1. Re-run the "Network rule log data" query and examine the data (**Note**: data ingestion into Log Analytics can take a few minutes. In this case, you should never see data about the `traceroute` done above, but to be sure, wait a minute or two and re-run the query.)
-1. Open a web browser and navigate to the public IP address of `spoke1-vm`. You should see a very basic web page that only shows just `spoke1-vm`.
-1. Find the NSG that corresponds to the NIC of the server you were browsing, and remove the rule that permits port 80 access. **Note**: applying NSG rules takes about a minute to complete.
-1. Browse to the _same_ public IP again. Your connection should be refused.
+1. Open a web browser and navigate to the public IP address of `spoke1-vm`. Your connection should time out. **Why?**
 1. Browse to the firewall policy, and add a DNAT rule:
 
    - Name: `Dnat`
@@ -187,14 +185,21 @@ We will make sure that the firewall is inspecting all outbound Internet traffic 
 
    | Rule name | Source | Port | Protocol | Destination               | Translated Address or FQDN | Translated Port |
    | --------- | ------ | ---- | -------- | ------------------------- | -------------------------- | --------------- |
-   | Allow-Web | \*     | 80   | TCP      | \<public IP of firewall\> | 10.1.10.4                  | 80              |
+   | Spoke1-vm | \*     | 80   | TCP      | \<public IP of firewall\> | \<public IP of spoke1-vm\> | 80              |
+   | Spoke2-vm | \*     | 81   | TCP      | \<public IP of firewall\> | \<public IP of spoke2-vm\> | 80              |
+   | hub-vm    | \*     | 82   | TCP      | \<public IP of firewall\> | \<public IP of hub-vm\>    | 80              |
 
-1. Browse to the public IP of the firewall. You should see the same `spoke1-vm` page as before, but now the traffic is being inspected/controlled by the firewall.
+1. Browse to the public IP of the firewall. You should see the `spoke1-vm` web page.
+1. Browse to the public IP of the firewall on port 81. You should see the `spoke2-vm` web page.
+1. Browse to the public IP of the firewall on port 82. You should see the `hub-vm` web page.
 1. SSH to the `spoke1-vm` and issue the command: `cat /var/log/apache2/access.log`. Examine the logs. Pay attention to the first "column" and explain what you see.
 
 ---
 
-### Question: How can we protect multiple sites with multiple servers serving them behind a single firewall?
+## Discussion:
+
+1. Can you explain why we put the firewall's PIP/32 routing to the Internet in the `hub`, `spoke1`, and `spoke2` route tables?
+1. How can we protect multiple sites with multiple servers serving them behind a single firewall?
 
 ---
 

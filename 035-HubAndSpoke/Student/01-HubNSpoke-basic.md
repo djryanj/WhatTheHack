@@ -25,7 +25,7 @@ We will be simulating the onprem environment using a VNet in Azure, and connecti
 1. Create four (4) virtual networks in the resource group with the following configurations:
    |Name|Address Space|Subnets<br>Name: Address Space|
    |---|---|---|
-   |`Hub`|10.0.0.0/16|GatewaySubnet: 10.0.0.0/24 <br>default: 10.0.10.0/24<br>AzureFirewallSubnet: 10.0.1.0/24|
+   |`Hub`|10.0.0.0/16|GatewaySubnet: 10.0.0.0/24 <br>default: 10.0.10.0/24|
    |`Onprem`|172.16.0.0/16|GatewaySubnet: 172.16.0.0/24 <br>default: 172.16.10.0/24|
    |`Spoke1`|10.1.0.0/16|default: 10.1.10.0/24|
    |`Spoke2`|10.2.0.0/16|default: 10.2.10.0/24|
@@ -197,8 +197,9 @@ We will be simulating the onprem environment using a VNet in Azure, and connecti
    - PSK: `AVerySecure&StrongKey`
    - Enable BGP: `True`
 1. Validate that the VPN gateways have connected.
-1. Adjust the NSG on the NIC of `onprem-vm` to accept connections inbound from your external IP to ports 22 and 80 of the _private_ IP address of the VM (172.1.0.4)
+1. Adjust the NSG on the NIC of `onprem-vm` to accept connections inbound from your external IP to ports 22 of the _private_ IP address of the VM (172.16.10.4)
 1. Adjust the NSG's of the NICs of the "cloud VMs" to accept traffic destined to tcp/80 (HTTP) from anywhere to their local Virtual Network.
+1. Browse to the public IP of one of the cloud VMs and observe the running web page.
 
 ### Explore the deployed environment
 
