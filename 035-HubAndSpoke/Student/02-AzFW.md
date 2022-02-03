@@ -103,13 +103,13 @@ We will make sure that the firewall is inspecting all outbound Internet traffic 
 1. Once the firewall has deployed, navigate to it in the Portal. Click on `Diagnostic Settings` in the left-hand blade, and then click on `+ Add Diagnostic Setting`. Name it `Log Analytics`, then enable `allLogs`, and `Send to the Log Analytics workspace` created above.
 1. Go to Azure Firewall Manager, and locate the `demo-policy`.
 
-   Although it is not germane to this exercise, it is worth knowing that Azure Firewall has 3 types of rulesets:
+   Although it is not germane to this exercise, it is worth knowing that Azure Firewall has 3 types of rule collections:
 
    - Network Rules: These are standard Layer-4 (source/dest/port) rules
    - Application rules: These are Layer-7 aware rules that permit FQDN filtering as well as using Layer 4 flows.
    - DNAT rules: These are better thought of as _inbound_ rules, from the Internet to something in the protected virtual networks
 
-1. Create the following ruleset:
+1. Create the following rule collections:
 
    - Name: `Internal`
    - Collection type: `Network`
